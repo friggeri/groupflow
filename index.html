@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>GroupFlow</title>
+<script type="text/javascript" src="vendor/jquery-1.7.2.min.js"></script>
+<script type="text/javascript" src="vendor/raphael-min.js"></script>
+<script type="text/javascript" src="vendor/coffee-script.js"></script>
+<script type="text/javascript" src="data/data.js"></script>
+<style>
+  /*
+    Colors:
+      group           : rgba(0, 0, 0, 0.075)
+      active group    : rgba(54, 175, 227, 0.25)
+      inactive person : rgba(0, 0, 0, 0.2)
+      active person   : rgba(54, 175, 227, 0.75)
+      computing       : hsl(10, 85%, 55%)
+  */
+  svg .button {
+    cursor:pointer;
+  }
+  svg .group {
+    stroke : none;
+    fill   : rgba(0, 0, 0, 0.075);
+  }
+  svg .group.selected {
+    fill : rgba(54, 175, 227, 0.25);
+  }
+  svg .group.computing {
+    stroke       : hsl(10, 85%, 55%);
+    stroke-width : 3;
+  }
+  svg .mark {
+    stroke : none;
+    fill   : rgba(54, 175, 227, 1);
+  }
+  svg .edge {
+    stroke-width : 2;
+    stroke : rgba(0, 0, 0, 0.2);
+  }
+  svg .edge.highlighted {
+    stroke : rgba(54, 175, 227, 1);
+  }
+  svg .session {
+    stroke : none;
+    fill : rgba(0, 0, 0, 0.075);
+  }
+  svg .session.computing {
+    fill : hsl(10, 85%, 55%);
+  }
+  svg .session-label {
+    text-anchor:start!important;
+    font-size:16px!important;
+    font-family: "Lucida Grande"!important;
+  }
+  #monitor {
+    display:none;
+    padding:4px;
+    box-sizing:border-box;
+    width :200px;
+    font-family:Lucida Grande;
+    background:rgba(240, 240, 240, 0.9);
+    border:4px solid rgba(100, 100, 100, 0.5);
+    border-radius:4px;
+    position:fixed;
+    bottom:10px;
+    right:10px;
+    z-index:10;
+    cursor:pointer;
+    height:85px;
+  }
+  * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #monitor table {
+    width: 100%;
+    border-spacing:0;
+  }
+  #monitor thead {
+    text-align: center;
+  }
+  #monitor tbody tr td:nth-child(odd){
+    width:15px;
+    text-align:center;
+    border-left:1px solid black;
+    padding:0 5px;
+  }
+  #monitor tbody tr td:first-child, #monitor tbody tr td:last-child{
+    border-left:none;
+    padding:0;
+  }
+  
+  #monitor tbody tr td:nth-child(even){
+    text-align:right;
+    padding:0 5px;
+    width:25px;
+  }
+  #monitor a {
+    color: black;
+    text-decoration:none;
+    display: inline-block;
+    width:32px;
+  }
+  #monitor .computing {
+    color: hsl(10, 85%, 55%);
+  }
+  #header {
+    background:#333;
+    margin:0;
+    color:white;
+    box-sizing:border-box;
+    padding:20px;
+    font-size:22px;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    z-index:5;
+  }
+  * {
+    font-family:Lucida Grande;
+    margin:0;
+    padding:0;
+  }
+  svg {
+    margin-top:80px;
+  }
+  #loading {
+    margin-top: 200px;
+    font-size:18px;
+    text-align:center;
+  }
+  .right {
+    float:right;
+  }
+  button {
+    background-color: #7fbf4d;
+    background-image: -webkit-linear-gradient(top, #7fbf4d, #63a62f);
+    background-image: linear-gradient(top, #7fbf4d, #63a62f);
+    border: 1px solid #63a62f;
+    border-bottom: 1px solid #5b992b;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 0 0 #96ca6d;
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    padding: 7px 16px 8px 16px;
+    text-align: center;
+    text-shadow: 0 -1px 0 #4c9021;
+  }
+  button:hover  { 
+    background-color: #76b347;
+    background-image: -webkit-linear-gradient(top, #76b347, #5e9e2e);
+    background-image: linear-gradient(top, #76b347, #5e9e2e);
+    box-shadow: inset 0 1px 0 0 #8dbf67;
+    cursor: pointer;
+  }
+  button:active { 
+    border: 1px solid #5b992b;
+    border-bottom: 1px solid #538c27;
+    box-shadow: inset 0 0 8px 4px #548c29; 
+  }
+  button:disabled, button:hover:disabled, button:active:disabled {
+    background-color: #BF4D4D;
+    
+    background-image: -webkit-linear-gradient(top, #BF4D4D, #A62E2E);
+    background-image: linear-gradient(top, #BF4D4D, #A62E2E);
+    border: 1px solid #A62E2E;
+    border-bottom: 1px solid #992B2B;
+    box-shadow: inset 0 1px 0 0 #C96D6D;
+    text-shadow: 0 -1px 0 #8F2621;
+    opacity:0.5;
+  }
+  #save-date {
+    display: inline-block;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+  <div id="header">
+    GroupFlow
+    
+    <div class="right">
+      <span id="save-date"></span>
+      <button id="save" disabled="disabled">Save</button>
+      <button id="download">Download</button>
+    </div>
+  </div>
+  <div id="loading">loading data...</div>
+  <div id="monitor" class="clearfix">
+    <table>
+      <thead>
+        <tr>
+          <td colspan="2">local</td>
+          <td colspan="2">global</td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="#" id="local-up-toggle">↑</a></td>
+          <td id="local-up"></td>
+          <td><a href="#" id="global-up-toggle">⬆</a></td>
+          <td id="global-up"></td>
+        </tr>
+        <tr>
+          <td><a href="#" id="local-down-toggle">↓</a></td>
+          <td id="local-down"></td>
+          <td><a href="#" id="global-down-toggle">⬇</a></td>
+          <td id="global-down"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <script type="text/coffeescript" src="groupflow.coffee"></script>
+</body>
+</html>
