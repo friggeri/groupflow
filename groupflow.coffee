@@ -60,10 +60,10 @@ Object.defineProperty Object.prototype, 'mixin',
 ## Delayed function queue
 Queue = []
 Queue.run = ->
-  return setTimeout Queue.run, 1 unless (fn = Queue.shift())?
+  return setTimeout Queue.run, 50 unless (fn = Queue.shift())?
   fn (next) ->
     Queue.push next if next?
-    setTimeout Queue.run, 1
+    setTimeout Queue.run, 50
 Queue.run()
 
 ## Naive set implementation
@@ -123,6 +123,8 @@ class Container extends Array
 
 
 class Solver
+  @diverge = 8
+  
   constructor: (@crossings, @dir) ->
     @active  = false
     @subject = @crossings.container
@@ -132,29 +134,40 @@ class Solver
     @active        = false
     @subject.update()
     @subject.draw()
+  
   start : ->
     @active = true
     @subject.update()
     @subject.draw()
     
     Queue.push step = (next) =>
-      before = @crossings[@dir]
-      if before is 0
+      pairs = []
+      costs = []
+      
+      startCost = minCost = @crossings[@dir]
+      if cost is 0
         @stop()
         return next()
       
-      [el1, el2] = @subject.pair()
-      @subject.swap(el1, el2)
       @subject.root.updateCrossings = false
-      @subject.update()
-      @subject.root.updateCrossings = true
-      after = @crossings[@dir]
       
-      if after >= before
+      for i in [0..Solver.diverge]
+        pairs.push([el1, el2] = @subject.pair())
         @subject.swap(el1, el2)
-        @subject.root.updateCrossings = false
         @subject.update()
-        @subject.root.updateCrossings = true
+        costs.push(cost = @crossings[@dir])
+        minCost = Math.min(cost, minCost)
+      
+      for i in [Solver.diverge..0]
+        break if (costs[i] == minCost and minCost isnt startCost)
+        
+        [el1, el2] = pairs[i]
+        @subject.swap(el1, el2)
+        @subject.update()
+      
+      if minCost is 0
+        @stop()
+        return next()
       
       @subject.root.updateCrossings = true
       @subject.root.draw()
@@ -585,7 +598,7 @@ class Data
       for _, person of @persons
         person.above   = person.current
         person.current = []
-    
+      break if sid is 2
     @updateCrossings = true
     @draw()
     
