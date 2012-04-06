@@ -598,7 +598,7 @@ class Data
       for _, person of @persons
         person.above   = person.current
         person.current = []
-      break if sid is 2
+      
     @updateCrossings = true
     @draw()
     
