@@ -633,7 +633,7 @@ jQuery ->
     
     
     now = new Date
-    lastSaved = "#{now.getDate()}/#{1+now.getMonth()}/#{now.getFullYear()} @ #{1+now.getHours()}:#{1+now.getMinutes()}"
+    lastSaved = "#{now.getDate()}/#{1+now.getMonth()}/#{now.getFullYear()} @ #{now.getHours()}:#{now.getMinutes()}"
     window.localStorage.setItem('save-date', lastSaved)
     setTimeout (-> 
       $('#save').attr('disabled', false)
