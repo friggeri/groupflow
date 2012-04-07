@@ -115,12 +115,21 @@ class Container extends Array
   
   swap : (item1, item2) ->
     @dirty = true
+    item1.dirty = true
+    item2.dirty = true
+    
     index1 = item1.index
     index2 = item2.index
     
     this[item1.index = index2] = item1
     this[item2.index = index1] = item2
-
+  
+  move: (item, position) ->
+    @dirty = true
+    delta  = if position > item.index then 1 else - 1
+    while item.index isnt position
+      other = this[item.index + delta]
+      @swap(item, other)
 
 class Solver
   @diverge = 8
@@ -527,6 +536,8 @@ class Sessions extends Container
 class Person extends Array
   @mixin Sync
   
+  @selected = null
+  
   constructor: (@id) ->
     @above   = []
     @current = []
@@ -539,6 +550,7 @@ class Person extends Array
       @shape.toggleClass 'highlighted', highlighted
     
     @property "active", (active) ->
+      Person.selected = if active then this else null
       @dirty = true
       @shape.toggleClass 'highlighted', (active or @highlighted)
       mark.active = active for mark in this
@@ -568,6 +580,29 @@ class Person extends Array
     for mark in this
       mark.draw()
       mark.shape.toFront()
+  
+  move: (dir) ->
+    appearedIn = {}
+    for mark in this
+      return if mark.container.container.index of appearedIn
+      appearedIn[mark.container.container.index] = true
+    
+    for mark in this
+      if dir is "left"
+        mark.container.move(mark, 0)
+      else
+        mark.container.move(mark, mark.container.length - 1)
+      mark.update()
+    
+    for mark in this
+      for other in mark.container
+        other.update()
+    
+    for mark in this
+      for other in mark.container
+        other.person.draw()
+    
+    @draw()
 
 class Data
   constructor: (sessions) ->
@@ -577,7 +612,10 @@ class Data
     for groups in sessions
       for members in groups
         for id in members
-          @persons[id] = new Person id unless @persons[id]
+          unless @persons[id]
+            person = new Person id
+            @persons[id] =  person 
+            person.root = this
     
     for groups, sid in sessions
       session = @sessions.push new Session
@@ -598,7 +636,7 @@ class Data
       for _, person of @persons
         person.above   = person.current
         person.current = []
-      
+    
     @updateCrossings = true
     @draw()
     
@@ -652,7 +690,20 @@ jQuery ->
   
   ## Keyboard controls
   # start/stop untanglers
+  move = (dir) ->
+    return unless Person.selected?
+    Person.selected.move(dir)
+  
   $(document).keypress (e) ->
+    key = String.fromCharCode(e.which)
+    if key == "w"
+      move 'left'
+      return false
+    
+    if key == "x"
+      move "right"
+      return false
+    
     return true unless Group.selected?
     
     bindings =
@@ -663,7 +714,6 @@ jQuery ->
       e: Group.selected.crossings.global.solver.up
       d: Group.selected.crossings.global.solver.down
     
-    key = String.fromCharCode(e.which)
     return true unless key of bindings
     
     bindings[key].toggle()
