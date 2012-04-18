@@ -719,6 +719,13 @@ jQuery ->
     bindings[key].toggle()
     return false
   
+  for type in ['local', 'global']
+    for dir in ['down', 'up']
+      do (type, dir) ->
+        $("##{type}-#{dir}-toggle").click ->
+          return false unless Group.selected
+          Group.selected.crossings[type].solver[dir].toggle()
+          return false
   # motion
   meta = false
   $(document).keydown (e) ->

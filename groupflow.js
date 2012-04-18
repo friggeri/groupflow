@@ -1070,7 +1070,7 @@
   })();
 
   jQuery(function() {
-    var $save, data, dataStr, lastSaved, meta, move, save;
+    var $save, data, dataStr, dir, lastSaved, meta, move, save, type, _fn, _i, _j, _len, _len1, _ref, _ref1;
     data = (dataStr = window.localStorage.getItem("data")) != null ? JSON.parse(dataStr) : window.data;
     lastSaved = window.localStorage.getItem("save-date");
     if (lastSaved != null) {
@@ -1130,9 +1130,27 @@
       bindings[key].toggle();
       return false;
     });
+    _ref = ['local', 'global'];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      type = _ref[_i];
+      _ref1 = ['down', 'up'];
+      _fn = function(type, dir) {
+        return $("#" + type + "-" + dir + "-toggle").click(function() {
+          if (!Group.selected) {
+            return false;
+          }
+          Group.selected.crossings[type].solver[dir].toggle();
+          return false;
+        });
+      };
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        dir = _ref1[_j];
+        _fn(type, dir);
+      }
+    }
     meta = false;
     $(document).keydown(function(e) {
-      var closest, d, dir, distance, group, minimum, other, session, _i, _len, _ref, _ref1;
+      var closest, d, distance, group, minimum, other, session, _k, _len2, _ref2, _ref3;
       if (meta === true && e.which === 83) {
         save();
         return false;
@@ -1141,7 +1159,7 @@
         return meta = true;
       }
       meta = false;
-      if (!((37 <= (_ref = e.which) && _ref <= 40) || e.which === 27)) {
+      if (!((37 <= (_ref2 = e.which) && _ref2 <= 40) || e.which === 27)) {
         return true;
       }
       if (Group.selected == null) {
@@ -1172,9 +1190,9 @@
         };
         closest = session[dir][0];
         minimum = distance(group, closest);
-        _ref1 = session[dir];
-        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-          other = _ref1[_i];
+        _ref3 = session[dir];
+        for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+          other = _ref3[_k];
           if ((d = distance(group, other)) < minimum) {
             minimum = d;
             closest = other;
